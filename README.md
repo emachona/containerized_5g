@@ -40,19 +40,15 @@ source .env
 docker-compose build --no-cache
 docker-compose up
 
-# srsRAN eNB
-docker-compose -f srsenb.yaml up -d && docker attach srsenb
-# srsRAN gNB
-docker-compose -f srsgnb.yaml up -d && docker attach srsgnb
 # srsRAN ZMQ based setup
-    # eNB
-    docker-compose -f srsenb_zmq.yaml up -d && docker attach srsenb_zmq
     # gNB
-    docker-compose -f srsgnb_zmq.yaml up -d && docker attach srsgnb_zmq
-    # 4G UE
-    docker-compose -f srsue_zmq.yaml up -d && docker attach srsue_zmq
+    docker-compose -f srsgnb_zmq.yaml up -d && docker container attach srsgnb_zmq
     # 5G UE
-    docker-compose -f srsue_5g_zmq.yaml up -d && docker attach srsue_5g_zmq
+    docker-compose -f srsue_5g_zmq2.yaml up -d && docker container attach srsue2_5g_zmq
+    
+    #to keep the UE active and check tun interface
+    docker exec -it srsue2_5g_zmq /bin/bash
+    /# ping -I tun_srsue 8.8.8.8
 ```
 
 ## Configuration
@@ -68,40 +64,6 @@ SGWU_ADVERTISE_IP --> Change this to value of DOCKER_HOST_IP set above only if e
 UPF_ADVERTISE_IP --> Change this to value of DOCKER_HOST_IP set above only if eNB/gNB is not running the same docker network/host
 ```
 
-If eNB/gNB is NOT running in the same docker network/host as the host running the dockerized Core/IMS then follow the below additional steps
-
-Under mme section in docker compose file (docker-compose.yaml, nsa-deploy.yaml), uncomment the following part
-```
-...
-    # ports:
-    #   - "36412:36412/sctp"
-...
-```
-
-Under amf section in docker compose file (docker-compose.yaml, nsa-deploy.yaml, sa-deploy.yaml), uncomment the following part
-```
-...
-    # ports:
-    #   - "38412:38412/sctp"
-...
-```
-
-If deploying in SA mode only (sa-deploy.yaml), then uncomment the following part under upf section
-```
-...
-    # ports:
-    #   - "2152:2152/udp"
-...
-```
-
-If deploying in NSA mode only (nsa-deploy.yaml, docker-compose.yaml), then uncomment the following part under sgwu section
-```
-...
-    # ports:
-    #   - "2152:2152/udp"
-...
-```
-
 ## Register a UE information
 
 Open (http://<DOCKER_HOST_IP>:3000) in a web browser, where <DOCKER_HOST_IP> is the IP of the machine/VM running the open5gs containers. Login with following credentials
@@ -110,17 +72,8 @@ Username : admin
 Password : 1423
 ```
 
-Using Web UI, add a subscriber
+Using Web UI, add a subscriber with the credentials under the USIM configuration in ue2_5g_zmq.conf 
 
-## srsLTE eNB settings
-
-If SGWU_ADVERTISE_IP is properly set to the host running the SGWU container in NSA deployment, then the following static route is not required.
-On the eNB, make sure to have the static route to SGWU container (since internal IP of the SGWU container is advertised in S1AP messages and UE wont find the core in Uplink)
-
-```
-# NSA - 4G5G Hybrid deployment
-ip r add <SGWU_CONTAINER_IP> via <SGWU_ADVERTISE_IP>
-```
 
 ## Not supported
 - IPv6 usage in Docker
